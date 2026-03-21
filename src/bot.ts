@@ -4,7 +4,7 @@ import { message } from 'telegraf/filters';
 
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const ADMINS = (process.env.ADMIN_IDS || '7618889413,5541894729').split(',').map(id => parseInt(id.trim()));
-const CHANNELS = (process.env.CHANNELS || 'lyceumverse, Mirzokhid_blog')
+const CHANNELS = (process.env.CHANNELS || 'Lyceumverse, Mirzokhid_blog')
   .split(',')
   .map(c => c.trim().replace(/^@/, ''));
 const PLATFORM_URL = process.env.PLATFORM_URL || 'https://iedmock.vercel.app';
@@ -44,7 +44,7 @@ async function checkSubscription(userId: number) {
 // Subscription keyboard
 function subscriptionKeyboard() {
   const buttons = CHANNELS.map(channel => 
-    Markup.button.url(`📢 ${channel} kanaliga obuna bo'lish`, `https://t.me/${channel}`)
+    Markup.button.url(`${channel}`, `https://t.me/${channel}`)
   );
   return Markup.inlineKeyboard([
     ...buttons.map(b => [b]),
@@ -66,7 +66,7 @@ async function sendMainMenu(ctx: Context, userId: number) {
       Markup.button.callback('👥 Mening referallarim', 'my_referrals'),
       Markup.button.callback('🔗 Referal linkim', 'my_link')
     ],
-    [Markup.button.callback('📸 Natijani yuklash', 'upload_screenshot')]
+    [Markup.button.callback('Natijani yuklash', 'upload_screenshot')]
   ];
 
   if (referal_count >= 5 && is_verified === 1) {
@@ -131,7 +131,6 @@ bot.start(async (ctx) => {
   if (!isSubscribed) {
     return ctx.reply(
       `❌ Botdan foydalanish uchun quyidagi kanallarga obuna bo'lishingiz kerak:\n\n` +
-      `❗️ ${channel || 'kanal'}-ga obuna bo'lmagansiz!\n\n` +
       `Obuna bo'lgandan so'ng 'Obunani tekshirish' tugmasini bosing.`,
       subscriptionKeyboard()
     );
@@ -149,7 +148,7 @@ bot.action('check_sub', async (ctx) => {
     await ctx.deleteMessage();
     await sendMainMenu(ctx, userId);
   } else {
-    await ctx.answerCbQuery(`❌ ${channel || 'kanal'}-ga obuna bo'lmagansiz!`, { show_alert: true });
+    await ctx.answerCbQuery(`❌ Obuna bo'lmagansiz!`, { show_alert: true });
   }
 });
 

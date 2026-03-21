@@ -2,8 +2,8 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import dotenv from "dotenv";
-import { initDb } from "./src/db";
-import { bot } from "./src/bot";
+import { initDb } from "./src/db.js";
+import { bot } from "./src/bot.js";
 
 dotenv.config();
 

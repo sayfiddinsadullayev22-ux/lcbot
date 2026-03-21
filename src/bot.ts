@@ -1,5 +1,5 @@
 import { Telegraf, Markup, Context } from 'telegraf';
-import { getDb } from './db';
+import { getDb } from './db.js';
 import { message } from 'telegraf/filters';
 
 const BOT_TOKEN = process.env.BOT_TOKEN || '';

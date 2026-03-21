@@ -214,7 +214,7 @@ bot.action('upload_screenshot', async (ctx) => {
       return ctx.answerCbQuery(`❌ Siz hali 5 ta referal to'plamadingiz! (${user.referal_count}/5)`, { show_alert: true });
     } else {
       await ctx.replyWithHTML(
-        "📸 <b>Natijangizni yuklang</b>\n\n" +
+        " <b>Natijangizni yuklang</b>\n\n" +
         "Iltimos, natijangizning skrinshotini yuboring.\n\n" +
         "⚠️ <b>Eslatma:</b> Skrinshot aniq va tushunarli bo'lishi kerak!\n\n" +
         "📌 Faqat rasm (jpg, png) formatida yuboring.\n\n" +
@@ -258,7 +258,7 @@ bot.on(message('photo'), async (ctx) => {
   } else {
     await ctx.replyWithHTML(
       "✅ <b>Natijangiz muvaffaqiyatli yuborildi!</b>\n\n" +
-      "📸 Sizning skrinshotingiz adminlarga yuborildi.\n\n" +
+      " Sizning skrinshotingiz adminlarga yuborildi.\n\n" +
       "🙏 E'tiboringiz uchun rahmat!"
     );
   }
@@ -266,7 +266,7 @@ bot.on(message('photo'), async (ctx) => {
   // Notify admins
   const photo = ctx.message.photo[ctx.message.photo.length - 1];
   const caption = (
-    `📸 <b>Yangi natija yuborildi!</b>\n\n` +
+    ` <b>Yangi natija yuborildi!</b>\n\n` +
     `👤 Foydalanuvchi: ${userData.full_name}\n` +
     `🆔 ID: ${userId}\n` +
     `📝 Username: @${userData.username !== 'None' ? userData.username : '❌'}\n` +

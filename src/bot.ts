@@ -92,7 +92,7 @@ async function sendMainMenu(ctx: Context, userId: number) {
     `👤 Ism: ${firstName}\n` +
     `🔑 Referal kodingiz: <code>${referal_code}</code>\n\n` +
     `${statusText}\n\n` +
-    `📸 Natijangizni yuklash tugmasini bosing va skrinshotni yuboring!`,
+    ` Natijangizni yuklash tugmasini bosing va skrinshotni yuboring!`,
     Markup.inlineKeyboard(buttons)
   );
 }

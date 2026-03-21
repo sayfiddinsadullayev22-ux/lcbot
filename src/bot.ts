@@ -70,19 +70,19 @@ async function sendMainMenu(ctx: Context, userId: number) {
     [Markup.button.callback('Mock', 'mock_action')]
   ];
 
-  if (referal_count >= 2 && is_verified === 1) {
+  if (referal_count >= 3 && is_verified === 1) {
     buttons.push([Markup.button.url('✅ Platformaga o\'tish', PLATFORM_URL)]);
-  } else if (referal_count >= 2 && is_verified === 0) {
+  } else if (referal_count >= 3 && is_verified === 0) {
     buttons.push([Markup.button.callback('⏳ Yuklangan', 'already_uploaded')]);
   }
 
   let statusText = "";
-  if (referal_count >= 2 && is_verified === 1) {
+  if (referal_count >= 3 && is_verified === 1) {
     statusText = "✅ Siz platformaga kirish huquqiga egasiz!";
-  } else if (referal_count >= 2 && is_verified === 0) {
-    statusText = "✅ Siz 2 ta referal to'pladingiz! Natijangizni yuklang va platformaga kirasiz.";
+  } else if (referal_count >= 3 && is_verified === 0) {
+    statusText = "✅ Siz 3 ta referal to'pladingiz! Natijangizni yuklang va platformaga kirasiz.";
   } else {
-    statusText = `📊 ${referal_count}/2 ta referal to'pladingiz. 2 ta referal to'plang va natijangizni yuklang!`;
+    statusText = `📊 ${referal_count}/3 ta referal to'pladingiz. 3 ta referal to'plang va natijangizni yuklang!`;
   }
 
   const chat = await ctx.getChat();
@@ -189,7 +189,7 @@ bot.action('my_link', async (ctx) => {
   if (user) {
     const botInfo = await bot.telegram.getMe();
     const link = `https://t.me/${botInfo.username}?start=${user.referal_code}`;
-    const shareText = encodeURIComponent(`Assalomu alaykum! Botdan foydalanish uchun obuna bo'ling va 2 ta referal to'plang!`);
+    const shareText = encodeURIComponent(`Assalomu alaykum! Botdan foydalanish uchun obuna bo'ling va 3 ta referal to'plang!`);
     
     await ctx.replyWithHTML(
       `🔗 <b>Sizning referal linkingiz:</b>\n\n<code>${link}</code>\n\n` +
@@ -210,15 +210,15 @@ bot.action('upload_screenshot', async (ctx) => {
   if (user) {
     if (user.is_verified === 1) {
       return ctx.answerCbQuery("✅ Siz allaqachon platformaga kirish huquqiga egasiz!", { show_alert: true });
-    } else if (user.referal_count < 2) {
-      return ctx.answerCbQuery(`❌ Siz hali 2 ta referal to'plamadingiz! (${user.referal_count}/2)`, { show_alert: true });
+    } else if (user.referal_count < 3) {
+      return ctx.answerCbQuery(`❌ Siz hali 3 ta referal to'plamadingiz! (${user.referal_count}/3)`, { show_alert: true });
     } else {
       await ctx.replyWithHTML(
         " <b>Natijangizni yuklang</b>\n\n" +
         "Iltimos, natijangizning skrinshotini yuboring.\n\n" +
         "⚠️ <b>Eslatma:</b> Skrinshot aniq va tushunarli bo'lishi kerak!\n\n" +
         "📌 Faqat rasm (jpg, png) formatida yuboring.\n\n" +
-        `📊 Hozirgi referal soningiz: ${user.referal_count}/2`
+        `📊 Hozirgi referal soningiz: ${user.referal_count}/3`
       );
       // In Telegraf, we use a state or just wait for the next photo message.
       // For simplicity in this script, we'll just handle any photo sent.
@@ -231,11 +231,11 @@ bot.action('mock_action', async (ctx) => {
   const db = await getDb();
   const user = db.prepare('SELECT referal_count FROM users WHERE user_id = ?').get(userId);
   
-  if (user && user.referal_count >= 2) {
-    await ctx.replyWithHTML(`✅ Tabriklaymiz! Siz 2 ta referal to'pladingiz.\n\n🚀 Platformaga o'tish: ${PLATFORM_URL}`);
+  if (user && user.referal_count >= 3) {
+    await ctx.replyWithHTML(`✅ Tabriklaymiz! Siz 3 ta referal to'pladingiz.\n\n🚀 Platformaga o'tish: ${PLATFORM_URL}`);
   } else {
     const count = user ? user.referal_count : 0;
-    await ctx.answerCbQuery(`❌ Siz hali 2 ta referal to'plamadingiz! (${count}/2)`, { show_alert: true });
+    await ctx.answerCbQuery(`❌ Siz hali 3 ta referal to'plamadingiz! (${count}/3)`, { show_alert: true });
   }
 });
 
@@ -256,7 +256,7 @@ bot.on(message('photo'), async (ctx) => {
 
   if (!userData) return;
 
-  if (userData.referal_count >= 2 && userData.is_verified === 0) {
+  if (userData.referal_count >= 3 && userData.is_verified === 0) {
     db.prepare('UPDATE users SET is_verified = 1 WHERE user_id = ?').run(userId);
     
     await ctx.replyWithHTML(
@@ -283,7 +283,7 @@ bot.on(message('photo'), async (ctx) => {
     `👤 Foydalanuvchi: ${userData.full_name}\n` +
     `🆔 ID: ${userId}\n` +
     `📝 Username: @${userData.username !== 'None' ? userData.username : '❌'}\n` +
-    `📊 Referal soni: ${userData.referal_count}/2\n` +
+    `📊 Referal soni: ${userData.referal_count}/3\n` +
     `✅ Holati: ${userData.is_verified ? 'Tasdiqlangan' : 'Yangi'}\n` +
     `📅 Vaqt: ${new Date().toISOString()}`
   );
@@ -309,14 +309,14 @@ bot.command('admin', async (ctx) => {
   const db = await getDb();
   const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   const verifiedUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_verified = 1').get().count;
-  const twoPlusUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE referal_count >= 2').get().count;
+  const threePlusUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE referal_count >= 3').get().count;
   const totalReferrals = db.prepare('SELECT COUNT(*) as count FROM referrals').get().count;
   const topUsers = db.prepare('SELECT user_id, full_name, username, referal_count FROM users ORDER BY referal_count DESC LIMIT 10').all();
 
   let text = `📊 <b>Admin panel statistikasi</b>\n\n` +
     `👥 Umumiy foydalanuvchilar: ${totalUsers}\n` +
     `✅ Tasdiqlanganlar: ${verifiedUsers}\n` +
-    `⭐ 2+ referal to'plaganlar: ${twoPlusUsers}\n` +
+    `⭐ 3+ referal to'plaganlar: ${threePlusUsers}\n` +
     `🔄 Jami referallar: ${totalReferrals}\n\n` +
     `🏆 <b>Top 10 foydalanuvchilar:</b>\n`;
 

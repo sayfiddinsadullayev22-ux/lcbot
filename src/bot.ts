@@ -66,7 +66,8 @@ async function sendMainMenu(ctx: Context, userId: number) {
       Markup.button.callback('👥 Mening referallarim', 'my_referrals'),
       Markup.button.callback('🔗 Referal linkim', 'my_link')
     ],
-    [Markup.button.callback('Natijani yuklash', 'upload_screenshot')]
+    [Markup.button.callback('Natijani yuklash', 'upload_screenshot')],
+    [Markup.button.callback('Mock', 'mock_action')]
   ];
 
   if (referal_count >= 5 && is_verified === 1) {
@@ -222,6 +223,19 @@ bot.action('upload_screenshot', async (ctx) => {
       // In Telegraf, we use a state or just wait for the next photo message.
       // For simplicity in this script, we'll just handle any photo sent.
     }
+  }
+});
+
+bot.action('mock_action', async (ctx) => {
+  const userId = ctx.from.id;
+  const db = await getDb();
+  const user = db.prepare('SELECT referal_count FROM users WHERE user_id = ?').get(userId);
+  
+  if (user && user.referal_count >= 5) {
+    await ctx.replyWithHTML(`✅ Tabriklaymiz! Siz 5 ta referal to'pladingiz.\n\n🚀 Platformaga o'tish: ${PLATFORM_URL}`);
+  } else {
+    const count = user ? user.referal_count : 0;
+    await ctx.answerCbQuery(`❌ Siz hali 5 ta referal to'plamadingiz! (${count}/5)`, { show_alert: true });
   }
 });
 

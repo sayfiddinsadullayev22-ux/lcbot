@@ -55,7 +55,8 @@ function subscriptionKeyboard() {
 // Main menu
 async function sendMainMenu(ctx: Context, userId: number) {
   const db = await getDb();
-  const user = db.prepare('SELECT referal_code, referal_count, is_verified FROM users WHERE user_id = ?').get(userId);
+  const userResult = await db.query('SELECT referal_code, referal_count, is_verified FROM users WHERE user_id = $1', [userId]);
+  const user = userResult.rows[0];
   
   if (!user) return;
 
@@ -105,26 +106,29 @@ bot.start(async (ctx) => {
   const fullName = `${ctx.from.first_name} ${ctx.from.last_name || ''}`.trim();
   
   const db = await getDb();
-  let user = db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
+  const userResult = await db.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+  let user = userResult.rows[0];
   
   const startPayload = ctx.payload; // Referral code from /start <payload>
 
   if (!user) {
     const newReferralCode = generateReferralCode();
-    let refererId: number | null = null;
+    let refererId: string | null = null;
 
     if (startPayload) {
-      const referer = db.prepare('SELECT user_id FROM users WHERE referal_code = ?').get(startPayload);
-      if (referer && referer.user_id !== userId) {
+      const refererResult = await db.query('SELECT user_id FROM users WHERE referal_code = $1', [startPayload]);
+      const referer = refererResult.rows[0];
+      if (referer && BigInt(referer.user_id) !== BigInt(userId)) {
         refererId = referer.user_id;
-        db.prepare('UPDATE users SET referal_count = referal_count + 1 WHERE user_id = ?').run(refererId);
-        db.prepare('INSERT INTO referrals (user_id, referer_id) VALUES (?, ?)').run(userId, refererId);
+        await db.query('UPDATE users SET referal_count = referal_count + 1 WHERE user_id = $1', [refererId]);
+        await db.query('INSERT INTO referrals (user_id, referer_id) VALUES ($1, $2)', [userId, refererId]);
       }
     }
 
-    db.prepare(
-      'INSERT INTO users (user_id, username, full_name, referal_code, referer_id, is_verified) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(userId, username, fullName, newReferralCode, refererId, 0);
+    await db.query(
+      'INSERT INTO users (user_id, username, full_name, referal_code, referer_id, is_verified) VALUES ($1, $2, $3, $4, $5, $6)',
+      [userId, username, fullName, newReferralCode, refererId, 0]
+    );
   }
 
   const { isSubscribed, channel } = await checkSubscription(userId);
@@ -156,13 +160,14 @@ bot.action('check_sub', async (ctx) => {
 bot.action('my_referrals', async (ctx) => {
   const userId = ctx.from.id;
   const db = await getDb();
-  const referrals = db.prepare(`
+  const referralsResult = await db.query(`
     SELECT u.user_id, u.full_name, u.username, r.date 
     FROM referrals r 
     JOIN users u ON r.user_id = u.user_id 
-    WHERE r.referer_id = ?
+    WHERE r.referer_id = $1
     ORDER BY r.date DESC
-  `).all(userId);
+  `, [userId]);
+  const referrals = referralsResult.rows;
 
   if (referrals.length === 0) {
     return ctx.reply("📭 Hozircha referallaringiz yo'q.\n\n🔗 Referal linkingizni do'stlarga yuboring!");
@@ -184,7 +189,8 @@ bot.action('my_referrals', async (ctx) => {
 bot.action('my_link', async (ctx) => {
   const userId = ctx.from.id;
   const db = await getDb();
-  const user = db.prepare('SELECT referal_code FROM users WHERE user_id = ?').get(userId);
+  const userResult = await db.query('SELECT referal_code FROM users WHERE user_id = $1', [userId]);
+  const user = userResult.rows[0];
   
   if (user) {
     const botInfo = await bot.telegram.getMe();
@@ -205,7 +211,8 @@ bot.action('my_link', async (ctx) => {
 bot.action('upload_screenshot', async (ctx) => {
   const userId = ctx.from.id;
   const db = await getDb();
-  const user = db.prepare('SELECT referal_count, is_verified FROM users WHERE user_id = ?').get(userId);
+  const userResult = await db.query('SELECT referal_count, is_verified FROM users WHERE user_id = $1', [userId]);
+  const user = userResult.rows[0];
   
   if (user) {
     if (user.is_verified === 1) {
@@ -229,7 +236,8 @@ bot.action('upload_screenshot', async (ctx) => {
 bot.action('mock_action', async (ctx) => {
   const userId = ctx.from.id;
   const db = await getDb();
-  const user = db.prepare('SELECT referal_count FROM users WHERE user_id = ?').get(userId);
+  const userResult = await db.query('SELECT referal_count FROM users WHERE user_id = $1', [userId]);
+  const user = userResult.rows[0];
   
   if (user && user.referal_count >= 3) {
     await ctx.replyWithHTML(`✅ Tabriklaymiz! Siz 3 ta referal to'pladingiz.\n\n🚀 Platformaga o'tish: ${PLATFORM_URL}`);
@@ -252,12 +260,13 @@ bot.action('back_menu', async (ctx) => {
 bot.on(message('photo'), async (ctx) => {
   const userId = ctx.from.id;
   const db = await getDb();
-  const userData = db.prepare('SELECT full_name, username, referal_count, is_verified FROM users WHERE user_id = ?').get(userId);
+  const userResult = await db.query('SELECT full_name, username, referal_count, is_verified FROM users WHERE user_id = $1', [userId]);
+  const userData = userResult.rows[0];
 
   if (!userData) return;
 
   if (userData.referal_count >= 3 && userData.is_verified === 0) {
-    db.prepare('UPDATE users SET is_verified = 1 WHERE user_id = ?').run(userId);
+    await db.query('UPDATE users SET is_verified = 1 WHERE user_id = $1', [userId]);
     
     await ctx.replyWithHTML(
       "✅ <b>Tabriklaymiz!</b> ✅\n\n" +
@@ -307,11 +316,11 @@ bot.command('admin', async (ctx) => {
   }
 
   const db = await getDb();
-  const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  const verifiedUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_verified = 1').get().count;
-  const threePlusUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE referal_count >= 3').get().count;
-  const totalReferrals = db.prepare('SELECT COUNT(*) as count FROM referrals').get().count;
-  const topUsers = db.prepare('SELECT user_id, full_name, username, referal_count FROM users ORDER BY referal_count DESC LIMIT 10').all();
+  const totalUsers = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
+  const verifiedUsers = (await db.query('SELECT COUNT(*) as count FROM users WHERE is_verified = 1')).rows[0].count;
+  const threePlusUsers = (await db.query('SELECT COUNT(*) as count FROM users WHERE referal_count >= 3')).rows[0].count;
+  const totalReferrals = (await db.query('SELECT COUNT(*) as count FROM referrals')).rows[0].count;
+  const topUsers = (await db.query('SELECT user_id, full_name, username, referal_count FROM users ORDER BY referal_count DESC LIMIT 10')).rows;
 
   let text = `📊 <b>Admin panel statistikasi</b>\n\n` +
     `👥 Umumiy foydalanuvchilar: ${totalUsers}\n` +
@@ -343,9 +352,9 @@ bot.action('detailed_stats', async (ctx) => {
   const db = await getDb();
   const today = new Date().toISOString().split('T')[0];
   
-  const todayUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE date(joined_date) = ?').get(today).count;
-  const todayRefs = db.prepare('SELECT COUNT(*) as count FROM referrals WHERE date(date) = ?').get(today).count;
-  const topFive = db.prepare('SELECT full_name, username, referal_count FROM users ORDER BY referal_count DESC LIMIT 5').all();
+  const todayUsers = (await db.query('SELECT COUNT(*) as count FROM users WHERE joined_date::date = $1', [today])).rows[0].count;
+  const todayRefs = (await db.query('SELECT COUNT(*) as count FROM referrals WHERE date::date = $1', [today])).rows[0].count;
+  const topFive = (await db.query('SELECT full_name, username, referal_count FROM users ORDER BY referal_count DESC LIMIT 5')).rows;
 
   let text = `📈 <b>Batafsil statistika</b>\n\n` +
     `📅 <b>Bugungi statistika:</b>\n` +
@@ -365,7 +374,7 @@ bot.action('detailed_stats', async (ctx) => {
 bot.on(message('text'), async (ctx) => {
   if (ADMINS.includes(ctx.from.id) && (ctx.message as any).reply_to_message?.text?.includes("Yubormoqchi bo'lgan xabaringizni yuboring")) {
     const db = await getDb();
-    const users = db.prepare('SELECT user_id FROM users').all();
+    const users = (await db.query('SELECT user_id FROM users')).rows;
     let success = 0;
     let failed = 0;
 

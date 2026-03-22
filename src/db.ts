@@ -1,40 +1,55 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import pg from 'pg';
 
-let db: any = null;
+const { Pool } = pg;
+
+let pool: pg.Pool | null = null;
 
 export async function initDb() {
-  if (db) return db;
+  if (pool) return pool;
 
-  const dbPath = path.join(process.cwd(), 'bot_database.db');
-  db = new Database(dbPath);
+  const connectionString = process.env.DATABASE_URL;
+  
+  if (!connectionString) {
+    console.error('DATABASE_URL is not set in environment variables');
+    // Fallback or throw error
+  }
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      user_id INTEGER PRIMARY KEY,
-      username TEXT,
-      full_name TEXT,
-      referal_code TEXT UNIQUE,
-      referer_id INTEGER,
-      referal_count INTEGER DEFAULT 0,
-      is_verified INTEGER DEFAULT 0,
-      joined_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+  pool = new Pool({
+    connectionString,
+    ssl: connectionString?.includes('localhost') ? false : { rejectUnauthorized: false }
+  });
 
-    CREATE TABLE IF NOT EXISTS referrals (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      referer_id INTEGER,
-      date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        user_id BIGINT PRIMARY KEY,
+        username TEXT,
+        full_name TEXT,
+        referal_code TEXT UNIQUE,
+        referer_id BIGINT,
+        referal_count INTEGER DEFAULT 0,
+        is_verified INTEGER DEFAULT 0,
+        joined_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
-  return db;
+      CREATE TABLE IF NOT EXISTS referrals (
+        id SERIAL PRIMARY KEY,
+        user_id BIGINT,
+        referer_id BIGINT,
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  } finally {
+    client.release();
+  }
+
+  return pool;
 }
 
 export async function getDb() {
-  if (!db) {
+  if (!pool) {
     return await initDb();
   }
-  return db;
+  return pool;
 }

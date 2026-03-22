@@ -64,7 +64,7 @@ async function sendMainMenu(ctx: Context, userId: number) {
   
   const buttons: any[][] = [
     [
-      Markup.button.callback('👥 Mening referallarim', 'my_referrals'),
+      Markup.button.callback('👥 Mening- referallarim', 'my_referrals'),
       Markup.button.callback('🔗 Referal linkim', 'my_link')
     ],
     [Markup.button.callback('Natijani yuklash', 'upload_screenshot')],
